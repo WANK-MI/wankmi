@@ -1,3 +1,4 @@
+import type { PublicKey } from '@solana/web3.js'
 import { useWankmiContext } from '../context/WankmiProvider'
 import type { WalletAdapter } from '../types'
 
@@ -7,7 +8,7 @@ export interface UseWalletReturn {
   /** All registered wallet adapters */
   wallets: WalletAdapter[]
   /** The connected wallet's public key, or null */
-  publicKey: import('@solana/web3.js').PublicKey | null
+  publicKey: PublicKey | null
   /** Whether a wallet is currently connected */
   connected: boolean
   /** Whether a connection attempt is in progress */
