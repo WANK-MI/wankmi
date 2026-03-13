@@ -1,8 +1,16 @@
 {
   "name": "@wankmi/wankmi",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Reactive React hooks for building Solana dApps",
-  "keywords": ["solana", "react", "hooks", "web3", "blockchain", "wallet", "dapp"],
+  "keywords": [
+    "solana",
+    "react",
+    "hooks",
+    "web3",
+    "blockchain",
+    "wallet",
+    "dapp"
+  ],
   "author": "",
   "license": "MIT",
   "repository": {
