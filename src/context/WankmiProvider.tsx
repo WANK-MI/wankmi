@@ -12,18 +12,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { WalletAdapter, WankmiConfig } from '../types'
 import { resolveEndpoint } from '../utils'
 
-// ─── Context shape ───────────────────────────────────────────────────────────
+// ─── Context shape ────────────────────────────────────────────────────────────
 
 interface WankmiContextValue {
   connection: Connection
   config: WankmiConfig
-  // Wallet state
   wallet: WalletAdapter | null
   wallets: WalletAdapter[]
   connecting: boolean
   disconnecting: boolean
   connected: boolean
-  // Wallet actions
   select: (walletName: string) => void
   connect: () => Promise<void>
   disconnect: () => Promise<void>
@@ -31,7 +29,7 @@ interface WankmiContextValue {
 
 const WankmiContext = createContext<WankmiContextValue | null>(null)
 
-// ─── Provider ────────────────────────────────────────────────────────────────
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 interface WankmiProviderProps {
   config: WankmiConfig
@@ -53,28 +51,58 @@ function createDefaultQueryClient(staleTime: number) {
 }
 
 export function WankmiProvider({ config, children, queryClient: externalQC }: WankmiProviderProps) {
-  const { network, endpoint, wallets, autoConnect = false, staleTime = 30_000, commitment = 'confirmed' } = config
+  const {
+    network,
+    endpoint,
+    wallets,
+    autoConnect = false,
+    staleTime = 30_000,
+    commitment = 'confirmed',
+  } = config
 
-  // Stable QueryClient
   const qcRef = useRef<QueryClient>(externalQC ?? createDefaultQueryClient(staleTime))
 
-  // Connection
   const connection = useMemo(() => {
     const { http, ws } = resolveEndpoint(network, endpoint)
     return new Connection(http, { commitment, wsEndpoint: ws })
   }, [network, endpoint, commitment])
 
-  // Wallet state
   const [selectedWalletName, setSelectedWalletName] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  // ✅ FIXED: React owns connected state — updated via adapter events, not
+  // by reading wallet.connected directly (which React can't observe)
+  const [connected, setConnected] = useState(false)
 
   const wallet = useMemo(
     () => wallets.find((w) => w.name === selectedWalletName) ?? null,
     [wallets, selectedWalletName]
   )
 
-  const connected = wallet?.connected ?? false
+  // ✅ FIXED: Subscribe to adapter events so connected flips reactively
+  useEffect(() => {
+    if (!wallet) {
+      setConnected(false)
+      return
+    }
+
+    // Sync immediately in case adapter was already connected (e.g. autoConnect)
+    setConnected(wallet.connected)
+
+    const onConnect = () => setConnected(true)
+    const onDisconnect = () => setConnected(false)
+    const onError = () => setConnected(false)
+
+    wallet.on('connect', onConnect)
+    wallet.on('disconnect', onDisconnect)
+    wallet.on('error', onError)
+
+    return () => {
+      wallet.off('connect', onConnect)
+      wallet.off('disconnect', onDisconnect)
+      wallet.off('error', onError)
+    }
+  }, [wallet])
 
   const select = useCallback((walletName: string) => {
     setSelectedWalletName(walletName)
@@ -82,30 +110,33 @@ export function WankmiProvider({ config, children, queryClient: externalQC }: Wa
 
   const connect = useCallback(async () => {
     if (!wallet) throw new Error('No wallet selected. Call select() first.')
-    if (wallet.connected || connecting) return
+    if (connected || connecting) return
     setConnecting(true)
     try {
       await wallet.connect()
+      // connected state is set by the 'connect' event listener above,
+      // not here — keeps the source of truth in one place
     } finally {
       setConnecting(false)
     }
-  }, [wallet, connecting])
+  }, [wallet, connected, connecting])
 
   const disconnect = useCallback(async () => {
     if (!wallet) return
     setDisconnecting(true)
     try {
       await wallet.disconnect()
+      // disconnected state is set by the 'disconnect' event listener above
     } finally {
       setDisconnecting(false)
     }
   }, [wallet])
 
-  // Auto-connect on mount if wallet was previously connected
+  // Auto-connect on mount
   useEffect(() => {
-    if (autoConnect && wallet && !wallet.connected && !connecting) {
+    if (autoConnect && wallet && !connected && !connecting) {
       connect().catch(() => {
-        // Silently fail — user hasn't interacted yet
+        // Silently fail — user hasn't interacted yet, browser may block popup
       })
     }
   }, [autoConnect, wallet]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,14 +164,14 @@ export function WankmiProvider({ config, children, queryClient: externalQC }: Wa
   )
 }
 
-// ─── Internal hook ───────────────────────────────────────────────────────────
+// ─── Internal hook ────────────────────────────────────────────────────────────
 
 export function useWankmiContext(): WankmiContextValue {
   const ctx = useContext(WankmiContext)
   if (!ctx) {
     throw new Error(
       '`useWankmiContext` must be used inside <WankmiProvider>. ' +
-      'Make sure you have wrapped your app with <WankmiProvider config={...}>.'
+        'Make sure you have wrapped your app with <WankmiProvider config={...}>.'
     )
   }
   return ctx

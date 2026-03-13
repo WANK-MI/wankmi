@@ -1,7 +1,7 @@
 import { PublicKey } from '@solana/web3.js'
 import type { SolBalance, SolanaEndpoint, SolanaNetwork } from '../types'
 
-// ─── Lamport / SOL conversion ────────────────────────────────────────────────
+// ─── Lamport / SOL conversion ─────────────────────────────────────────────────
 
 const LAMPORTS_PER_SOL = 1_000_000_000n
 
@@ -25,7 +25,7 @@ export function formatSolBalance(lamports: bigint): SolBalance {
   }
 }
 
-// ─── Token formatting ────────────────────────────────────────────────────────
+// ─── Token formatting ─────────────────────────────────────────────────────────
 
 export function formatTokenAmount(amount: bigint, decimals: number): string {
   const divisor = Math.pow(10, decimals)
@@ -36,7 +36,7 @@ export function formatTokenAmount(amount: bigint, decimals: number): string {
   })
 }
 
-// ─── RPC endpoints ───────────────────────────────────────────────────────────
+// ─── RPC endpoints ────────────────────────────────────────────────────────────
 
 const DEFAULT_ENDPOINTS: Record<SolanaNetwork, string> = {
   'mainnet-beta': 'https://api.mainnet-beta.solana.com',
@@ -65,7 +65,7 @@ export function resolveEndpoint(
   }
 }
 
-// ─── Public key helpers ──────────────────────────────────────────────────────
+// ─── Public key helpers ───────────────────────────────────────────────────────
 
 export function toPublicKey(address: string | PublicKey): PublicKey {
   if (address instanceof PublicKey) return address
@@ -86,14 +86,21 @@ export function shortenAddress(address: string | PublicKey, chars = 4): string {
   return `${str.slice(0, chars)}...${str.slice(-chars)}`
 }
 
-// ─── Query key factories ─────────────────────────────────────────────────────
+// ─── Query key factories ──────────────────────────────────────────────────────
 
 export const queryKeys = {
   solBalance: (address: string | PublicKey) =>
     ['wankmi', 'solBalance', address instanceof PublicKey ? address.toBase58() : address] as const,
 
-  tokenAccounts: (address: string | PublicKey) =>
-    ['wankmi', 'tokenAccounts', address instanceof PublicKey ? address.toBase58() : address] as const,
+  // ✅ FIXED: mint is now part of the key so filtered/unfiltered queries
+  // don't share the same cache entry
+  tokenAccounts: (address: string | PublicKey, mint?: PublicKey) =>
+    [
+      'wankmi',
+      'tokenAccounts',
+      address instanceof PublicKey ? address.toBase58() : address,
+      mint?.toBase58() ?? null,
+    ] as const,
 
   mintInfo: (mint: string | PublicKey) =>
     ['wankmi', 'mint', mint instanceof PublicKey ? mint.toBase58() : mint] as const,

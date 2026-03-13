@@ -1,16 +1,37 @@
 /**
  * Wallet adapter implementations for wankmi.
  *
- * Import from 'wankmi/adapters':
- *   import { PhantomAdapter, BackpackAdapter } from 'wankmi/adapters'
+ * Import from '@wankmi/wankmi/adapters':
+ *   import { PhantomAdapter, BackpackAdapter, SolflareAdapter } from '@wankmi/wankmi/adapters'
  */
 
 import { Connection, PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js'
-import type { WalletAdapter, SendTransactionOptions } from './types'
+import type { WalletAdapter, WalletEvent, SendTransactionOptions } from './types'
 
-// ─── Base adapter ────────────────────────────────────────────────────────────
+// ─── Event emitter ────────────────────────────────────────────────────────────
 
-abstract class BaseWalletAdapter implements WalletAdapter {
+type Listener = () => void
+
+class WalletEventEmitter {
+  private listeners: Partial<Record<WalletEvent, Listener[]>> = {}
+
+  on(event: WalletEvent, listener: Listener): void {
+    if (!this.listeners[event]) this.listeners[event] = []
+    this.listeners[event]!.push(listener)
+  }
+
+  off(event: WalletEvent, listener: Listener): void {
+    this.listeners[event] = this.listeners[event]?.filter((l) => l !== listener) ?? []
+  }
+
+  protected emit(event: WalletEvent): void {
+    this.listeners[event]?.forEach((l) => l())
+  }
+}
+
+// ─── Base adapter ─────────────────────────────────────────────────────────────
+
+abstract class BaseWalletAdapter extends WalletEventEmitter implements WalletAdapter {
   abstract name: string
   abstract icon: string
   abstract url: string
@@ -39,9 +60,32 @@ abstract class BaseWalletAdapter implements WalletAdapter {
       maxRetries: options?.maxRetries ?? 3,
     })
   }
+
+  /** Call after a successful connect — sets state and fires event */
+  protected handleConnect(publicKey: PublicKey): void {
+    this.publicKey = publicKey
+    this.connected = true
+    this.connecting = false
+    this.emit('connect')
+  }
+
+  /** Call after a successful disconnect — clears state and fires event */
+  protected handleDisconnect(): void {
+    this.publicKey = null
+    this.connected = false
+    this.disconnecting = false
+    this.emit('disconnect')
+  }
+
+  /** Call on any wallet error — fires event */
+  protected handleError(): void {
+    this.connecting = false
+    this.disconnecting = false
+    this.emit('error')
+  }
 }
 
-// ─── Phantom ─────────────────────────────────────────────────────────────────
+// ─── Phantom ──────────────────────────────────────────────────────────────────
 
 interface PhantomProvider {
   publicKey: { toBytes(): Uint8Array; toBase58(): string } | null
@@ -75,10 +119,10 @@ export class PhantomAdapter extends BaseWalletAdapter {
     this.connecting = true
     try {
       const res = await this.provider.connect()
-      this.publicKey = new PublicKey(res.publicKey.toBase58())
-      this.connected = true
-    } finally {
-      this.connecting = false
+      this.handleConnect(new PublicKey(res.publicKey.toBase58()))
+    } catch (err) {
+      this.handleError()
+      throw err
     }
   }
 
@@ -86,10 +130,10 @@ export class PhantomAdapter extends BaseWalletAdapter {
     this.disconnecting = true
     try {
       await this.provider.disconnect()
-      this.publicKey = null
-      this.connected = false
-    } finally {
-      this.disconnecting = false
+      this.handleDisconnect()
+    } catch (err) {
+      this.handleError()
+      throw err
     }
   }
 
@@ -107,7 +151,7 @@ export class PhantomAdapter extends BaseWalletAdapter {
   }
 }
 
-// ─── Backpack ────────────────────────────────────────────────────────────────
+// ─── Backpack ─────────────────────────────────────────────────────────────────
 
 export class BackpackAdapter extends BaseWalletAdapter {
   name = 'Backpack'
@@ -128,10 +172,10 @@ export class BackpackAdapter extends BaseWalletAdapter {
     this.connecting = true
     try {
       const res = await this.provider.connect()
-      this.publicKey = new PublicKey(res.publicKey.toBase58())
-      this.connected = true
-    } finally {
-      this.connecting = false
+      this.handleConnect(new PublicKey(res.publicKey.toBase58()))
+    } catch (err) {
+      this.handleError()
+      throw err
     }
   }
 
@@ -139,10 +183,10 @@ export class BackpackAdapter extends BaseWalletAdapter {
     this.disconnecting = true
     try {
       await this.provider.disconnect()
-      this.publicKey = null
-      this.connected = false
-    } finally {
-      this.disconnecting = false
+      this.handleDisconnect()
+    } catch (err) {
+      this.handleError()
+      throw err
     }
   }
 
@@ -160,7 +204,7 @@ export class BackpackAdapter extends BaseWalletAdapter {
   }
 }
 
-// ─── Solflare ────────────────────────────────────────────────────────────────
+// ─── Solflare ─────────────────────────────────────────────────────────────────
 
 export class SolflareAdapter extends BaseWalletAdapter {
   name = 'Solflare'
@@ -179,10 +223,10 @@ export class SolflareAdapter extends BaseWalletAdapter {
     this.connecting = true
     try {
       const res = await this.provider.connect()
-      this.publicKey = new PublicKey(res.publicKey.toBase58())
-      this.connected = true
-    } finally {
-      this.connecting = false
+      this.handleConnect(new PublicKey(res.publicKey.toBase58()))
+    } catch (err) {
+      this.handleError()
+      throw err
     }
   }
 
@@ -190,10 +234,10 @@ export class SolflareAdapter extends BaseWalletAdapter {
     this.disconnecting = true
     try {
       await this.provider.disconnect()
-      this.publicKey = null
-      this.connected = false
-    } finally {
-      this.disconnecting = false
+      this.handleDisconnect()
+    } catch (err) {
+      this.handleError()
+      throw err
     }
   }
 

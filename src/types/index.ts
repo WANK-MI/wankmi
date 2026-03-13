@@ -1,14 +1,14 @@
 import type { Connection, PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js'
 
-// ─── Network ────────────────────────────────────────────────────────────────
+// ─── Network ─────────────────────────────────────────────────────────────────
 
 export type SolanaNetwork = 'mainnet-beta' | 'devnet' | 'testnet' | 'localnet'
-
 export type SolanaEndpoint = string | { http: string; ws?: string }
 
-// ─── Wallet ─────────────────────────────────────────────────────────────────
+// ─── Wallet ──────────────────────────────────────────────────────────────────
 
 export type WalletName = string
+export type WalletEvent = 'connect' | 'disconnect' | 'error'
 
 export interface WalletAdapter {
   name: WalletName
@@ -28,6 +28,9 @@ export interface WalletAdapter {
     connection: Connection,
     options?: SendTransactionOptions
   ): Promise<string>
+  // Event emitter — required for reactive connected state in WankmiProvider
+  on(event: WalletEvent, listener: () => void): void
+  off(event: WalletEvent, listener: () => void): void
 }
 
 export interface SendTransactionOptions {
@@ -37,7 +40,7 @@ export interface SendTransactionOptions {
   maxRetries?: number
 }
 
-// ─── Balances ───────────────────────────────────────────────────────────────
+// ─── Balances ────────────────────────────────────────────────────────────────
 
 export interface SolBalance {
   /** Raw lamports */
@@ -48,7 +51,7 @@ export interface SolBalance {
   formatted: string
 }
 
-// ─── Tokens ─────────────────────────────────────────────────────────────────
+// ─── Tokens ──────────────────────────────────────────────────────────────────
 
 export interface TokenAccount {
   /** The SPL token mint address */
@@ -74,9 +77,15 @@ export interface MintInfo {
   isInitialized: boolean
 }
 
-// ─── Transactions ───────────────────────────────────────────────────────────
+// ─── Transactions ────────────────────────────────────────────────────────────
 
-export type TransactionStatus = 'idle' | 'signing' | 'sending' | 'confirming' | 'confirmed' | 'error'
+export type TransactionStatus =
+  | 'idle'
+  | 'signing'
+  | 'sending'
+  | 'confirming'
+  | 'confirmed'
+  | 'error'
 
 export interface SendTransactionResult {
   signature: string
@@ -90,7 +99,7 @@ export interface SignMessageResult {
   signatureBase58: string
 }
 
-// ─── Config ─────────────────────────────────────────────────────────────────
+// ─── Config ──────────────────────────────────────────────────────────────────
 
 export interface WankmiConfig {
   network: SolanaNetwork

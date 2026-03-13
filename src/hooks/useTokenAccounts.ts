@@ -65,7 +65,9 @@ export function useTokenAccounts({
     : undefined
 
   const query = useQuery({
-    queryKey: queryKeys.tokenAccounts(resolvedAddress ?? 'null'),
+    // ✅ FIXED: resolvedMint included in query key so filtered queries
+    // get their own cache entry and don't collide with unfiltered ones
+    queryKey: queryKeys.tokenAccounts(resolvedAddress ?? 'null', resolvedMint),
     queryFn: async (): Promise<TokenAccount[]> => {
       if (!resolvedAddress) throw new Error('No address provided')
 
@@ -79,7 +81,6 @@ export function useTokenAccounts({
       return response.value.map((item) => {
         const info = item.account.data.parsed.info
         const tokenAmount = info.tokenAmount
-
         return {
           mint: new PublicKey(info.mint as string),
           address: item.pubkey,
