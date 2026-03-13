@@ -2,8 +2,8 @@
 
 > Reactive React hooks for building Solana dApps.
 
-[![npm version](https://img.shields.io/npm/v/wankmi)](https://www.npmjs.com/package/wankmi)
-[![license](https://img.shields.io/npm/l/wankmi)](./LICENSE)
+[![npm version](https://img.shields.io/npm/v/@wankmi/wankmi)](https://www.npmjs.com/package/@wankmi/wankmi)
+[![license](https://img.shields.io/npm/l/@wankmi/wankmi)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 
 Wallets, balances, tokens, transactions — all the hooks you need, none of the boilerplate. Built from scratch for Solana's account model. Not an Ethereum port.
@@ -13,11 +13,11 @@ Wallets, balances, tokens, transactions — all the hooks you need, none of the 
 ## Install
 
 ```bash
-npm install wankmi
+npm install @wankmi/wankmi
 # or
-pnpm add wankmi
+pnpm add @wankmi/wankmi
 # or
-yarn add wankmi
+yarn add @wankmi/wankmi
 ```
 
 ---
@@ -27,8 +27,8 @@ yarn add wankmi
 Wrap your app with `WankmiProvider`:
 
 ```tsx
-import { WankmiProvider } from 'wankmi'
-import { PhantomAdapter } from 'wankmi/adapters'
+import { WankmiProvider } from '@wankmi/wankmi'
+import { PhantomAdapter } from '@wankmi/wankmi/adapters'
 
 const config = {
   network: 'mainnet-beta',
@@ -48,7 +48,7 @@ function App() {
 Then use hooks anywhere in your tree:
 
 ```tsx
-import { useWallet, useSolBalance } from 'wankmi'
+import { useWallet, useSolBalance } from '@wankmi/wankmi'
 
 function Dashboard() {
   const { publicKey, connected, connect } = useWallet()
@@ -179,7 +179,7 @@ const { signature, signatureBase58 } = await signMessage('Sign in to my dApp')
 ## Wallet Adapters
 
 ```ts
-import { PhantomAdapter, BackpackAdapter, SolflareAdapter } from 'wankmi/adapters'
+import { PhantomAdapter, BackpackAdapter, SolflareAdapter } from '@wankmi/wankmi/adapters'
 ```
 
 ---
