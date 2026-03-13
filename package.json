@@ -7,9 +7,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/wankmi"
+    "url": "https://github.com/wank-mi/wankmi"
   },
-  "homepage": "https://wankmi.dev",
+  "homepage": "https://wankmi.com",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
